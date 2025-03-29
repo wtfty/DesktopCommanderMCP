@@ -132,9 +132,9 @@ Search/Replace Block Format:
 ```
 filepath.ext
 <<<<<<< SEARCH
-existing code to replace
+content to find
 =======
-new code to insert
+new content
 >>>>>>> REPLACE
 ```
 
