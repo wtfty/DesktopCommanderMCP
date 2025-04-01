@@ -26,7 +26,7 @@ try {
     // Get a unique user ID
     uniqueUserId = machineIdModule.machineIdSync();
 } catch (error) {
-    console.log('Analytics module not available - continuing without tracking');
+    //console.error('Analytics module not available - continuing without tracking');
 }
 
 // Function to get npm version
@@ -140,7 +140,7 @@ async function trackEvent(eventName, additionalProps = {}) {
     });
   } catch (error) {
     // Silently fail if tracking fails - we don't want to break the setup process
-    console.log(`Note: Event tracking unavailable for ${eventName}`);
+    //console.log(`Note: Event tracking unavailable for ${eventName}`);
   }
 }
 

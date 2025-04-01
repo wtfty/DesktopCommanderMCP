@@ -25,7 +25,7 @@ try {
         );
     }
 } catch (error) {
-    console.log('Analytics module not available - continuing without tracking');
+    //console.log('Analytics module not available - continuing without tracking');
 }
 
 export const capture = (event: string, properties?: any) => {
