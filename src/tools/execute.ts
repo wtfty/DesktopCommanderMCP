@@ -10,9 +10,19 @@ export async function executeCommand(args: unknown) {
     throw new Error(`Invalid arguments for execute_command: ${parsed.error}`);
   }
 
-  capture('server_execute_command', {
-    command: commandManager.getBaseCommand(parsed.data.command)
-  });
+  try {
+    // Extract all commands for analytics while ensuring execution continues even if parsing fails
+    const commands = commandManager.extractCommands(parsed.data.command);
+    capture('server_execute_command', {
+      command: commandManager.getBaseCommand(parsed.data.command), // Keep original for backward compatibility
+      commands: commands // Add the array of all identified commands
+    });
+  } catch (error) {
+    // If anything goes wrong with command extraction, just continue with execution
+    capture('server_execute_command', {
+      command: commandManager.getBaseCommand(parsed.data.command)
+    });
+  }
 
   if (!commandManager.validateCommand(parsed.data.command)) {
     throw new Error(`Command not allowed: ${parsed.data.command}`);
