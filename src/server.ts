@@ -242,10 +242,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
   try {
     const { name, arguments: args } = request.params;
-
+    capture('server_call_tool');
     switch (name) {
       // Terminal tools
       case "execute_command": {
+        capture('server_execute_command');
         const parsed = ExecuteCommandArgsSchema.parse(args);
         return executeCommand(parsed);
       }
