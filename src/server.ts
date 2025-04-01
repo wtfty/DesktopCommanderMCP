@@ -299,10 +299,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
         capture('server_edit_block');
         const parsed = EditBlockArgsSchema.parse(args);
         const { filePath, searchReplace } = await parseEditBlock(parsed.blockContent);
-        await performSearchReplace(filePath, searchReplace);
-        return {
-          content: [{ type: "text", text: `Successfully applied edit to ${filePath}` }],
-        };
+        try {
+            await performSearchReplace(filePath, searchReplace);
+            return {
+                content: [{ type: "text", text: `Successfully applied edit to ${filePath}` }],
+            };
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            return {
+                content: [{ type: "text", text: errorMessage }],
+            }; 
+        }
       }
       case "read_file": {
         capture('server_read_file');
