@@ -22,6 +22,9 @@ export async function executeCommand(args: unknown) {
     capture('server_execute_command', {
       command: commandManager.getBaseCommand(parsed.data.command)
     });
+    
+    // Log the error but continue execution
+    console.error('Error during command extraction:', error);
   }
 
   if (!commandManager.validateCommand(parsed.data.command)) {
