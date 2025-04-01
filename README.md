@@ -53,7 +53,7 @@ First, ensure you've downloaded and installed the [Claude Desktop app](https://c
 ### Option 1: Install through npx
 Just run this in terminal
 ```
-npx @wonderwhy-er/desktop-commander setup
+npx @wonderwhy-er/desktop-commander@latest setup
 ```
 Restart Claude if running
 

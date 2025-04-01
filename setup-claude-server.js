@@ -4,20 +4,30 @@ import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { exec } from "node:child_process";
-import { PostHog } from 'posthog-node';
-import machineId from 'node-machine-id';
 import { version as nodeVersion } from 'process';
 
-const client = new PostHog(
-    'phc_TFQqTkCwtFGxlwkXDY3gSs7uvJJcJu8GurfXd6mV063',
-    { 
-        host: 'https://eu.i.posthog.com',
-        flushAt: 1, // send all every time
-        flushInterval: 0 //send always
-    }
-)
-// Get a unique user ID
-const uniqueUserId = machineId.machineIdSync();
+// Optional analytics - will gracefully degrade if posthog-node isn't available
+let client = null;
+let uniqueUserId = 'unknown';
+
+try {
+    const { PostHog } = await import('posthog-node');
+    const machineIdModule = await import('node-machine-id');
+    
+    client = new PostHog(
+        'phc_TFQqTkCwtFGxlwkXDY3gSs7uvJJcJu8GurfXd6mV063',
+        { 
+            host: 'https://eu.i.posthog.com',
+            flushAt: 1, // send all every time
+            flushInterval: 0 //send always
+        }
+    );
+    
+    // Get a unique user ID
+    uniqueUserId = machineIdModule.machineIdSync();
+} catch (error) {
+    console.log('Analytics module not available - continuing without tracking');
+}
 
 // Function to get npm version
 async function getNpmVersion() {
@@ -118,14 +128,24 @@ async function getTrackingProperties(additionalProps = {}) {
   };
 }
 
+// Helper function for tracking that handles missing PostHog gracefully
+async function trackEvent(eventName, additionalProps = {}) {
+  if (!client) return; // Skip tracking if PostHog client isn't available
+  
+  try {
+    client.capture({
+      distinctId: uniqueUserId,
+      event: eventName,
+      properties: await getTrackingProperties(additionalProps)
+    });
+  } catch (error) {
+    // Silently fail if tracking fails - we don't want to break the setup process
+    console.log(`Note: Event tracking unavailable for ${eventName}`);
+  }
+}
+
 // Initial tracking
-(async () => {
-  client.capture({
-    distinctId: uniqueUserId,
-    event: 'npx_setup_start',
-    properties: await getTrackingProperties()
-  });
-})();
+trackEvent('npx_setup_start');
 
 // Fix for Windows ESM path resolution
 const __filename = fileURLToPath(import.meta.url);
@@ -231,11 +251,7 @@ async function restartClaude() {
 
 		logToFile(`Claude has been restarted.`)
 	} catch (error) {
-        client.capture({
-            distinctId: uniqueUserId,
-            event: 'npx_setup_restart_claude_error',
-            properties: await getTrackingProperties({ error: error.message })
-        });
+        await trackEvent('npx_setup_restart_claude_error', { error: error.message });
 		logToFile(`Failed to restart Claude: ${error}`, true)
 	}
 }
@@ -246,11 +262,7 @@ if (!existsSync(claudeConfigPath)) {
     logToFile('Creating default config file...');
     
     // Track new installation
-    client.capture({
-        distinctId: uniqueUserId,
-        event: 'npx_setup_create_default_config',
-        properties: await getTrackingProperties()
-    });
+    await trackEvent('npx_setup_create_default_config');
     
     // Create the directory if it doesn't exist
     const configDir = dirname(claudeConfigPath);
@@ -322,31 +334,35 @@ export default async function setup() {
 
         // Write the updated config back
         writeFileSync(claudeConfigPath, JSON.stringify(config, null, 2), 'utf8');
-        client.capture({
-            distinctId: uniqueUserId,
-            event: 'npx_setup_update_config',
-            properties: await getTrackingProperties()
-        });
+        await trackEvent('npx_setup_update_config');
         logToFile('Successfully added MCP server to Claude configuration!');
         logToFile(`Configuration location: ${claudeConfigPath}`);
         logToFile('\nTo use the server:\n1. Restart Claude if it\'s currently running\n2. The server will be available as "desktop-commander" in Claude\'s MCP server list');
 
         await restartClaude();
         
-        client.capture({
-            distinctId: uniqueUserId,
-            event: 'npx_setup_complete',
-            properties: await getTrackingProperties()
-        });
-        await client.shutdown() 
+        await trackEvent('npx_setup_complete');
+        
+        // Safe shutdown
+        if (client) {
+            try {
+                await client.shutdown();
+            } catch (error) {
+                // Ignore shutdown errors
+            }
+        }
     } catch (error) {
-        client.capture({
-            distinctId: uniqueUserId,
-            event: 'npx_setup_final_error',
-            properties: await getTrackingProperties({ error: error.message })
-        });
+        await trackEvent('npx_setup_final_error', { error: error.message });
         logToFile(`Error updating Claude configuration: ${error}`, true);
-        await client.shutdown() 
+        
+        // Safe shutdown
+        if (client) {
+            try {
+                await client.shutdown();
+            } catch (error) {
+                // Ignore shutdown errors
+            }
+        }
         process.exit(1);
     }
 }
