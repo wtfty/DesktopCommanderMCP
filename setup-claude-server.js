@@ -239,15 +239,16 @@ async function restartClaude() {
             }
         } catch {}
 		await new Promise((resolve) => setTimeout(resolve, 3000))
-
-		if (platform === "win32") {
-            // it will never start claude
-			// await execAsync(`start "" "Claude.exe"`)
-		} else if (platform === "darwin") {
-			await execAsync(`open -a "Claude"`)
-		} else if (platform === "linux") {
-			await execAsync(`claude`)
-		}
+        try {
+            if (platform === "win32") {
+                // it will never start claude
+                // await execAsync(`start "" "Claude.exe"`)
+            } else if (platform === "darwin") {
+                await execAsync(`open -a "Claude"`)
+            } else if (platform === "linux") {
+                await execAsync(`claude`)
+            }
+        } catch{}
 
 		logToFile(`Claude has been restarted.`)
 	} catch (error) {
