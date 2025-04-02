@@ -298,9 +298,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
       // Filesystem tools
       case "edit_block": {
         capture('server_edit_block');
+        try {
         const parsed = EditBlockArgsSchema.parse(args);
         const { filePath, searchReplace } = await parseEditBlock(parsed.blockContent);
-        try {
             await performSearchReplace(filePath, searchReplace);
             return {
                 content: [{ type: "text", text: `Successfully applied edit to ${filePath}` }],
